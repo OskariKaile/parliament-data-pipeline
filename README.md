@@ -4,6 +4,8 @@ This pipeline pulls every item submitted to the Swiss Parliament since 1 January
 
 I am building it to learn Alteryx and Snowflake hands-on, on real public data, covering what a data engineering role on this stack does day to day: connect a new source, transform it, load it, add data quality, automate notifications, try Cortex AI features, and document the result.
 
+**How I built it:** I set up Alteryx Designer and Snowflake from scratch and ran the pipeline end to end in Designer myself, with Claude Code as my coding assistant for the code and SQL. Every count is checked against a Python script.
+
 ![The workflow in Alteryx Designer after a full run](docs/img/designer_run.jpg)
 
 *The workflow in Alteryx Designer after the run on 10 Nov 2026: record counts on each connection, 0 errors, 0 warnings, 13 min 47 s.*

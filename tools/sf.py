@@ -82,11 +82,12 @@ def main(argv: list[str]) -> None:
                 pass
             show(cur, 200)
     elif cmd == "streamlit":
-        app = (ROOT / "snowflake" / "streamlit" / "streamlit_app.py").as_posix()
         with connect() as con:
             con.cursor().execute("CREATE STAGE IF NOT EXISTS PARLIAMENT.MART.APP_STAGE DIRECTORY = (ENABLE = TRUE)")
-            con.cursor().execute(f"PUT 'file://{app}' @PARLIAMENT.MART.APP_STAGE/monitor "
-                                 "AUTO_COMPRESS = FALSE OVERWRITE = TRUE")
+            for name in ("streamlit_app.py", "environment.yml"):
+                f = (ROOT / "snowflake" / "streamlit" / name).as_posix()
+                con.cursor().execute(f"PUT 'file://{f}' @PARLIAMENT.MART.APP_STAGE/monitor "
+                                     "AUTO_COMPRESS = FALSE OVERWRITE = TRUE")
         run_files([str(ROOT / "snowflake" / "07_streamlit.sql")])
     elif cmd == "status":
         with connect() as con:

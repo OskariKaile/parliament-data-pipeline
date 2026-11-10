@@ -1,0 +1,9 @@
+# Packages for the warehouse runtime (Snowflake conda channel).
+# Streamlit is pinned: the runtime's default version has no st.column_config.
+name: app_environment
+channels:
+  - snowflake
+dependencies:
+  - streamlit=1.52.2
+  - pandas
+  - altair

@@ -4,13 +4,21 @@ This pipeline pulls every item submitted to the Swiss Parliament since 1 January
 
 I am building it to learn Alteryx and Snowflake hands-on, on real public data, covering what a data engineering role on this stack does day to day: connect a new source, transform it, load it, add data quality, automate notifications, try Cortex AI features, and document the result.
 
+![The workflow in Alteryx Designer after a full run](docs/img/designer_run.jpg)
+
+*The workflow in Alteryx Designer after the run on 10 Nov 2026: record counts on each connection, 0 errors, 0 warnings, 13 min 47 s.*
+
+![The Streamlit in Snowflake dashboard](docs/img/dashboard.jpg)
+
+*The Streamlit in Snowflake dashboard: 6,690 items, all enriched by Cortex, 573 flagged as AI / data / digital.*
+
 ## Status
 
 | Part | State |
 |---|---|
 | Python reference check against the live API | **Run** (6 Nov 2026). The counts and data issues below come from this run. |
 | Alteryx workflow (`.yxmd`) | **Runs in Alteryx Designer 2026.3** (7 Nov 2026): about 9 minutes, all API data into Snowflake. Snowflake matches the Python check on every table. What the first runs found and how it was fixed: [docs/PIPELINE.md](docs/PIPELINE.md#what-the-first-real-runs-taught-me-designer-20263-7-nov-2026) |
-| Snowflake objects, MERGE procedures, dashboard views (00–03, 05), Streamlit app (07) | **Deployed** on a Snowflake trial (AWS eu-north-1) |
+| Snowflake objects, MERGE procedures, dashboard views (00–03, 05), Streamlit app (07) | **Deployed** on a Snowflake trial (AWS eu-north-1). Dashboard opened and checked on 10 Nov 2026 |
 | Cortex evaluation (04) | **Run** (9 Nov 2026): 300 items, 4 AI variants + baseline, 1.59 AI credits. Results: [docs/CORTEX_EVAL.md](docs/CORTEX_EVAL.md) |
 | Cortex enrichment (03) | **Run on all 6,690 items** (9 Nov 2026): 27 minutes, about 6.5 AI credits. 573 items flagged as AI / data / digital. The triggered task is on, so new or changed items are enriched after each Alteryx load. Details: [docs/CORTEX_EVAL.md](docs/CORTEX_EVAL.md#full-backfill-9-nov-2026) |
 | Incremental run, end to end | **Run** (10 Nov 2026): the Alteryx workflow again in Designer, 13 min 47 s, 0 errors and 0 warnings; Snowflake matches the Python check on all five counts. 76 items had changed since 7 Nov: the MERGE updated them, and the triggered task re-enriched the 70 whose text had changed. The other 6 changes (status etc.) did not trigger new AI calls. |
@@ -86,6 +94,7 @@ snowflake/
   06_notifications.sql       DQ alert + daily digest email
   07_streamlit.sql           Streamlit in Snowflake app
   streamlit/streamlit_app.py
+  streamlit/environment.yml  pins the Streamlit version for the warehouse runtime
 tools/
   reference_check.py         Python twin of the workflow = test oracle for the Alteryx run
   sf.py                      run SQL files / status checks with key-pair auth
@@ -94,6 +103,7 @@ docs/
   SETUP.md                   from zero to a running pipeline
   PIPELINE.md                tool-by-tool walkthrough, design decisions, what I would do next
   CORTEX_EVAL.md             evaluation results: quality and cost per variant
+  img/                       screenshots of the Designer run and the dashboard
 ```
 
 ## Run it

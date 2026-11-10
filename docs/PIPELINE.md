@@ -63,6 +63,8 @@ The workflow is generated from `alteryx/build_workflow.py`, written before I had
 
 I also tried the **Snowflake Bulk loader** (`snowbl:`, local staging via PUT + COPY), the usual answer to slow ODBC loads. Designer 2026.3 with Snowflake ODBC driver 4.3 failed with *Data source name not found* both with the DSN and DSN-less, while the same strings work for `odbc:`. The likely cause is that the bulk loader expects the older driver name `SnowflakeDSIIDriver` (driver 4.x registers as `Snowflake ODBC`). On a client setup with the 3.x driver or DCM-managed connections, that is the first thing I would switch on.
 
+**Streamlit in Snowflake (10 Nov 2026).** The dashboard did not open: *pyproject.toml file does not exist*. Since Snowflake's 2026_06 behaviour change, an app created without `RUNTIME_NAME` gets the new container runtime, which needs a compute pool and a `pyproject.toml`. The app was written for the warehouse runtime (`get_active_session()`, only built-in packages), so `07_streamlit.sql` now sets `RUNTIME_NAME = 'SYSTEM$WAREHOUSE_RUNTIME'`. The warehouse runtime's default Streamlit has no `st.column_config`, so `environment.yml` pins `streamlit=1.52.2` from the Snowflake conda channel.
+
 ## What I would do next in production
 
 - Move the Snowflake connection from a DSN to Alteryx DCM with the key in a vault, and schedule the workflow on Alteryx Server / Alteryx One.

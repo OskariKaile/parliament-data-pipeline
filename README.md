@@ -1,6 +1,6 @@
 # Swiss Parliament data pipeline: Alteryx → Snowflake → Cortex AI
 
-This pipeline pulls every item submitted to the Swiss Parliament since 1 January 2025 (motions, interpellations, postulates, Federal Council bills, about 6,700 items) from the official open-data API. **Alteryx** cleans and checks the data and loads it into **Snowflake**. **Snowflake Cortex AI** then translates it to English, summarises it, classifies it and flags the items about AI and digitalisation. A Streamlit dashboard and two automated emails sit on top.
+This pipeline pulls every item submitted to the Swiss Parliament since 1 January 2025 (motions, interpellations, postulates, Federal Council bills, about 6,700 items) from the official open-data API. **Alteryx** cleans and checks the data and loads it into **Snowflake**. **Snowflake Cortex AI** then translates it to English, summarises it, classifies it and flags the items about AI and digitalisation. A Streamlit dashboard sits on top. Two automated emails are written but not switched on.
 
 I am building it to learn Alteryx and Snowflake hands-on, on real public data, covering what a data engineering role on this stack does day to day: connect a new source, transform it, load it, add data quality, automate notifications, try Cortex AI features, and document the result.
 
@@ -58,7 +58,7 @@ flowchart LR
 | Load | Alteryx → `RAW` → `CORE` | Each Output Data tool empties and refills a landing table over ODBC, then its *Post Create SQL* calls a MERGE procedure. MERGE is hash-based and idempotent: re-running a load changes nothing. |
 | AI enrichment | Snowflake Cortex | A stream on `CORE.BUSINESS` feeds a triggered task. Only new or changed items (by content hash) reach `AI_TRANSLATE` (title DE → EN), `AI_COMPLETE` (one-sentence English summary, and topics with a JSON schema of the 28 official topics, `AI_CLASSIFY` as fallback) and `AI_FILTER` (is it about AI, data, digitalisation or cyber?). Model: llama3.1-70b, inference kept inside the EU. |
 | Evaluation | Snowflake Cortex | AI topic tags vs the topics Parliament staff assign by hand, on 300 items, in 4 variants plus a no-AI baseline. The general model with a JSON schema scored best (F1 0.653 vs 0.175 baseline) at about 1/12 of `AI_CLASSIFY`'s cost per item, so the enrichment uses it: [docs/CORTEX_EVAL.md](docs/CORTEX_EVAL.md). |
-| Serve | Snowflake | `MART` views, a Streamlit in Snowflake dashboard, an hourly ALERT that emails when a DQ check fails, and a weekday 07:00 digest email of new AI/digital items with English summaries. |
+| Serve | Snowflake | `MART` views and a Streamlit in Snowflake dashboard. Written but not switched on: an ALERT that emails when a DQ check fails, and a weekday 07:00 digest email of new AI/digital items with English summaries. |
 
 ## Real data issues found so far
 

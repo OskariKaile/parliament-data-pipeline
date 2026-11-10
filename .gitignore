@@ -1,0 +1,9 @@
+# local snapshots and secrets never go to git
+data/
+secrets/
+.env
+*.p8
+*.pem
+__pycache__/
+alteryx/*.bak
+preview/

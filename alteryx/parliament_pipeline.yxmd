@@ -1,0 +1,2342 @@
+<?xml version="1.0"?>
+<AlteryxDocument yxmdVer="2024.1">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Plugin="AlteryxGuiToolkit.TextBox.TextBox">
+        <Position x="30" y="10" width="1380" height="62" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Text>Swiss Parliament pipeline (Alteryx -&gt; Snowflake)
+Source: Curia Vista OData API (ws.parlament.ch), business items, authors and members since [User.SinceDate] (Workflow Configuration &gt; Constants).
+Adding a new API entity = one more row in the config Text Input (tool 1 in container 1).
+Snowflake: ODBC DSN 'snowflake_parliament'. Each Output writes a RAW landing table, then its Post-SQL calls the MERGE procedure (CORE). Cortex AI enrichment is a Snowflake task on the CORE stream.</Text>
+          <Font name="Segoe UI" size="9" style="0" />
+          <TextColor name="Black" />
+          <FillColor r="255" g="255" b="240" />
+          <Shape shape="0" />
+          <Justification Justification="0" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="90" width="1380" height="210" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>1  Extract: config-driven OData API ingestion (count -&gt; pages -&gt; JSON -&gt; records)</Caption>
+          <Style TextColor="#314c4a" FillColor="#e8f1f2" BorderColor="#314c4a" Transparency="25" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="3">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+            <Position x="60" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <NumRows value="3" />
+              <Fields>
+                <Field name="ENTITY" />
+                <Field name="FILTER" />
+                <Field name="FIELDS" />
+                <Field name="BASE_URL" />
+                <Field name="PAGE_SIZE" />
+              </Fields>
+              <Data>
+                <r><c>Business</c><c>Language eq 'DE' and SubmissionDate ge datetime'{SINCE}T00:00:00'</c><c>ID,BusinessShortNumber,BusinessTypeAbbreviation,BusinessTypeName,Title,Description,SubmittedText,ReasonText,InitialSituation,BusinessStatusText,ResponsibleDepartmentAbbreviation,SubmissionCouncilAbbreviation,Tags,TagNames,SubmissionDate,Modified</c><c>https://ws.parlament.ch/odata.svc</c><c>1000</c></r>
+                <r><c>BusinessRole</c><c>Language eq 'DE' and Role eq 7 and BusinessSubmissionDate ge datetime'{SINCE}T00:00:00'</c><c>ID,BusinessNumber,MemberCouncilNumber,CommitteeNumber,CantonNumber,ParlGroupNumber,Role</c><c>https://ws.parlament.ch/odata.svc</c><c>1000</c></r>
+                <r><c>MemberCouncil</c><c>Language eq 'DE' and (DateLeaving eq null or DateLeaving ge datetime'{SINCE}T00:00:00')</c><c>ID,FirstName,LastName,PartyAbbreviation,ParlGroupAbbreviation,CantonAbbreviation,CouncilAbbreviation,Active</c><c>https://ws.parlament.ch/odata.svc</c><c>1000</c></r>
+              </Data>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Config: one row per API entity</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+        </Node>
+        <Node ToolID="4">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="150" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="Replace(Replace(Replace([FILTER], '{SINCE}', [User.SinceDate]), ' ', '%20'), &quot;'&quot;, '%27')" field="FILTER_ENC" size="1000" type="V_WString" />
+                <FormulaField expression="ToNumber([PAGE_SIZE])" field="PAGE_SIZE_N" size="4" type="Int32" />
+                <FormulaField expression="[BASE_URL] + '/' + [ENTITY] + '/$count?$filter=' + [FILTER_ENC]" field="COUNT_URL" size="2000" type="V_WString" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Build $count URL</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="5">
+          <GuiSettings Plugin="AlteryxConnectorGui.Download.Download">
+            <Position x="240" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <URLField>COUNT_URL</URLField>
+              <OutputMode>String</OutputMode>
+              <CodePage>65001</CodePage>
+              <EncodeURLs value="False" />
+              <Headers>
+                <NameValues>
+                  <Item name="User-Agent" value="parliament-data-pipeline (portfolio project)" />
+                </NameValues>
+                <Fields orderChanged="False">
+                  <Field name="*Unknown" selected="False" />
+                </Fields>
+              </Headers>
+              <Payload>
+                <HTTPAction>GET</HTTPAction>
+                <QueryStringBodyMode>Compose</QueryStringBodyMode>
+                <ComposeNameValues />
+                <ComposeFields orderChanged="False">
+                  <Field name="*Unknown" selected="False" />
+                </ComposeFields>
+              </Payload>
+              <UserName />
+              <Password />
+              <numConnections>2</numConnections>
+              <Timeout>600</Timeout>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>GET row count</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxConnectorEngine.dll" EngineDllEntryPoint="AlteryxDownload" />
+        </Node>
+        <Node ToolID="6">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="330" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="ToNumber(Trim([DownloadData]))" field="TOTAL" size="8" type="Int64" />
+                <FormulaField expression="CEIL([TOTAL] / [PAGE_SIZE_N])" field="N_PAGES" size="4" type="Int32" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Pages needed</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="7">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="420" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="FILTER_ENC" selected="True" />
+                <SelectField field="FIELDS" selected="True" />
+                <SelectField field="BASE_URL" selected="True" />
+                <SelectField field="PAGE_SIZE_N" selected="True" />
+                <SelectField field="TOTAL" selected="True" />
+                <SelectField field="N_PAGES" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="8">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.GenerateRows.GenerateRows">
+            <Position x="510" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <UpdateField value="False" />
+              <UpdateField_Name />
+              <CreateField_Name>PAGE</CreateField_Name>
+              <CreateField_Type>Int32</CreateField_Type>
+              <CreateField_Size>4</CreateField_Size>
+              <Expression_Init>0</Expression_Init>
+              <Expression_Cond>[PAGE] &lt; [N_PAGES]</Expression_Cond>
+              <Expression_Loop>[PAGE] + 1</Expression_Loop>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>One row per page</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxGenerateRows" />
+        </Node>
+        <Node ToolID="9">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="600" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="[BASE_URL] + '/' + [ENTITY] + '?$filter=' + [FILTER_ENC] + '&amp;$select=' + [FIELDS] + '&amp;$orderby=ID&amp;$top=' + ToString([PAGE_SIZE_N]) + '&amp;$skip=' + ToString([PAGE] * [PAGE_SIZE_N]) + '&amp;$format=json'" field="PAGE_URL" size="4000" type="V_WString" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Page URL ($top/$skip)</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="10">
+          <GuiSettings Plugin="AlteryxConnectorGui.Download.Download">
+            <Position x="690" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <URLField>PAGE_URL</URLField>
+              <OutputMode>String</OutputMode>
+              <CodePage>65001</CodePage>
+              <EncodeURLs value="False" />
+              <Headers>
+                <NameValues>
+                  <Item name="User-Agent" value="parliament-data-pipeline (portfolio project)" />
+                </NameValues>
+                <Fields orderChanged="False">
+                  <Field name="*Unknown" selected="False" />
+                </Fields>
+              </Headers>
+              <Payload>
+                <HTTPAction>GET</HTTPAction>
+                <QueryStringBodyMode>Compose</QueryStringBodyMode>
+                <ComposeNameValues />
+                <ComposeFields orderChanged="False">
+                  <Field name="*Unknown" selected="False" />
+                </ComposeFields>
+              </Payload>
+              <UserName />
+              <Password />
+              <numConnections>2</numConnections>
+              <Timeout>600</Timeout>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>GET page (JSON)</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxConnectorEngine.dll" EngineDllEntryPoint="AlteryxDownload" />
+        </Node>
+        <Node ToolID="11">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="780" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="GetWord([DownloadHeaders], 1)" field="HTTP_STATUS" size="3" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="12">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="870" y="170" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>[HTTP_STATUS] = '200'</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>HTTP 200?</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="13">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="915" y="120" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="TOTAL" selected="True" />
+                <SelectField field="PAGE" selected="True" />
+                <SelectField field="PAGE_SIZE_N" selected="True" />
+                <SelectField field="DownloadData" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="14">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.JSONParse.JSONParse">
+            <Position x="960" y="140" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <JSON_Field>DownloadData</JSON_Field>
+              <IncludeInOutput value="False" />
+              <SingleField value="True" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Flatten JSON</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJSONParse" />
+        </Node>
+        <Node ToolID="15">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="1050" y="140" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="REGEX_Replace([JSON_Name], '^d\.(?:results\.)?(\d+)\..*$', '$1')" field="REC" size="10" type="V_String" />
+                <FormulaField expression="REGEX_Replace([JSON_Name], '^d\.(?:results\.)?\d+\.', '')" field="FIELD" size="100" type="V_String" />
+                <FormulaField expression="[PAGE] * [PAGE_SIZE_N] + ToNumber([REC])" field="REC_KEY" size="8" type="Int64" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Record index + field name</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="16">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="1140" y="140" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>REGEX_Match([JSON_Name], '^d\.(results\.)?\d+\.[A-Za-z]+$')</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Drop __metadata</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="17">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.CrossTab.CrossTab">
+            <Position x="1230" y="140" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <GroupFields orderChanged="False">
+                <Field field="ENTITY" />
+                <Field field="TOTAL" />
+                <Field field="REC_KEY" />
+              </GroupFields>
+              <HeaderField field="FIELD" />
+              <DataField field="JSON_ValueString" />
+              <Methods>
+                <Method method="First" />
+                <Separator>,</Separator>
+                <FieldSize value="1073741823" />
+              </Methods>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Rows -&gt; one record per row</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxCrossTab" />
+        </Node>
+        <Node ToolID="18">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1320" y="210" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="19">..\data\api_snapshot.yxdb</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <NoSpatialIndex>False</NoSpatialIndex>
+                <SaveSource>True</SaveSource>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Local raw snapshot</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+      </ChildNodes>
+    </Node>
+    <Node ToolID="19">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="330" width="1380" height="250" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>2  Transform: business items + official topics</Caption>
+          <Style TextColor="#314c4a" FillColor="#eef3e6" BorderColor="#314c4a" Transparency="25" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="20">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="60" y="400" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>[ENTITY] = 'Business'</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Business rows</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="21">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="150" y="400" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="ToNumber([ID])" field="BUSINESS_ID" size="8" type="Int64" />
+                <FormulaField expression="[BusinessShortNumber]" field="SHORT_NUMBER" size="20" type="V_WString" />
+                <FormulaField expression="[BusinessTypeAbbreviation]" field="BUSINESS_TYPE" size="20" type="V_WString" />
+                <FormulaField expression="[BusinessTypeName]" field="BUSINESS_TYPE_NAME" size="200" type="V_WString" />
+                <FormulaField expression="Trim([Title])" field="TITLE_DE" size="1000" type="V_WString" />
+                <FormulaField expression="IIF(!IsEmpty([SubmittedText]), [SubmittedText], IIF(!IsEmpty([InitialSituation]), [InitialSituation], [Description]))" field="BODY_RAW" size="1073741823" type="V_WString" />
+                <FormulaField expression="Left(Trim(REGEX_Replace(Replace(Replace(Replace(Replace(REGEX_Replace([BODY_RAW], '&lt;[^&gt;]+&gt;', ' '), '&amp;nbsp;', ' '), '&amp;lt;', '&lt;'), '&amp;gt;', '&gt;'), '&amp;amp;', '&amp;'), '\s+', ' ')), 16000)" field="BODY_DE" size="16000" type="V_WString" />
+                <FormulaField expression="Left(Trim(REGEX_Replace(Replace(Replace(Replace(Replace(REGEX_Replace([ReasonText], '&lt;[^&gt;]+&gt;', ' '), '&amp;nbsp;', ' '), '&amp;lt;', '&lt;'), '&amp;gt;', '&gt;'), '&amp;amp;', '&amp;'), '\s+', ' ')), 16000)" field="REASON_DE" size="16000" type="V_WString" />
+                <FormulaField expression="[BusinessStatusText]" field="STATUS" size="200" type="V_WString" />
+                <FormulaField expression="[ResponsibleDepartmentAbbreviation]" field="DEPARTMENT" size="20" type="V_WString" />
+                <FormulaField expression="[SubmissionCouncilAbbreviation]" field="COUNCIL" size="10" type="V_WString" />
+                <FormulaField expression="[Tags]" field="TAG_IDS" size="200" type="V_WString" />
+                <FormulaField expression="[TagNames]" field="TAG_NAMES" size="1000" type="V_WString" />
+                <FormulaField expression="IIF(IsEmpty([TagNames]), 0, REGEX_CountMatches([TagNames], '\|') + 1)" field="TAG_COUNT" size="2" type="Int16" />
+                <FormulaField expression="Length([BODY_DE])" field="BODY_CHARS" size="4" type="Int32" />
+                <FormulaField expression="IIF(IsEmpty([SubmissionDate]), Null(), DateTimeFormat(DateTimeAdd('1970-01-01 00:00:00', FLOOR(ToNumber(REGEX_Replace([SubmissionDate], '[^0-9]', '')) / 1000), 'seconds'), '%Y-%m-%d'))" field="SUBMITTED_ON" size="10" type="Date" />
+                <FormulaField expression="IIF(IsEmpty([Modified]), Null(), DateTimeFormat(DateTimeAdd('1970-01-01 00:00:00', FLOOR(ToNumber(REGEX_Replace([Modified], '[^0-9]', '')) / 1000), 'seconds'), '%Y-%m-%d %H:%M:%S'))" field="MODIFIED_AT" size="19" type="DateTime" />
+                <FormulaField expression="'https://www.parlament.ch/de/ratsbetrieb/suche-curia-vista/geschaeft?AffairId=' + [ID]" field="SOURCE_URL" size="300" type="V_WString" />
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="DateTimeStart()" field="LOADED_AT" size="19" type="DateTime" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Types, HTML -&gt; text, epoch -&gt; date</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="22">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="240" y="400" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="TOTAL" selected="True" />
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="SHORT_NUMBER" selected="True" />
+                <SelectField field="BUSINESS_TYPE" selected="True" />
+                <SelectField field="BUSINESS_TYPE_NAME" selected="True" />
+                <SelectField field="TITLE_DE" selected="True" />
+                <SelectField field="BODY_DE" selected="True" />
+                <SelectField field="REASON_DE" selected="True" />
+                <SelectField field="STATUS" selected="True" />
+                <SelectField field="DEPARTMENT" selected="True" />
+                <SelectField field="COUNCIL" selected="True" />
+                <SelectField field="TAG_IDS" selected="True" />
+                <SelectField field="TAG_NAMES" selected="True" />
+                <SelectField field="TAG_COUNT" selected="True" />
+                <SelectField field="BODY_CHARS" selected="True" />
+                <SelectField field="SUBMITTED_ON" selected="True" />
+                <SelectField field="MODIFIED_AT" selected="True" />
+                <SelectField field="SOURCE_URL" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="LOADED_AT" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="23">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Unique.Unique">
+            <Position x="330" y="400" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <UniqueFields>
+                <Field field="BUSINESS_ID" />
+              </UniqueFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Dedupe on ID</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnique" />
+        </Node>
+        <Node ToolID="24">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="420" y="400" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>!IsNull([BUSINESS_ID]) AND !IsEmpty([TITLE_DE]) AND !IsNull([SUBMITTED_ON])</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>DQ: id, title, date</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="25">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="510" y="380" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="SHORT_NUMBER" selected="True" />
+                <SelectField field="BUSINESS_TYPE" selected="True" />
+                <SelectField field="BUSINESS_TYPE_NAME" selected="True" />
+                <SelectField field="TITLE_DE" selected="True" />
+                <SelectField field="BODY_DE" selected="True" />
+                <SelectField field="REASON_DE" selected="True" />
+                <SelectField field="STATUS" selected="True" />
+                <SelectField field="DEPARTMENT" selected="True" />
+                <SelectField field="COUNCIL" selected="True" />
+                <SelectField field="TAG_IDS" selected="True" />
+                <SelectField field="TAG_NAMES" selected="True" />
+                <SelectField field="TAG_COUNT" selected="True" />
+                <SelectField field="BODY_CHARS" selected="True" />
+                <SelectField field="SUBMITTED_ON" selected="True" />
+                <SelectField field="MODIFIED_AT" selected="True" />
+                <SelectField field="SOURCE_URL" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="LOADED_AT" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Landing layout</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="26">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="510" y="470" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="TAG_NAMES" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="27">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.TextToColumns.TextToColumns">
+            <Position x="600" y="470" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Field>TAG_NAMES</Field>
+              <ErrorHandling>Last</ErrorHandling>
+              <RootName>TAG_NAMES</RootName>
+              <Delimeters value="|" />
+              <Flags value="0" />
+              <NumFields value="1" />
+              <SplitToRows value="True" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>One row per topic</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextToColumns" />
+        </Node>
+        <Node ToolID="28">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="690" y="470" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>!IsEmpty(Trim([TAG_NAMES]))</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="29">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+            <Position x="600" y="540" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Passwords />
+              <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="0">..\reference\topics.csv</File>
+              <FormatSpecificOptions>
+                <HeaderRow>True</HeaderRow>
+                <IgnoreErrors>False</IgnoreErrors>
+                <AllowShareWrite>False</AllowShareWrite>
+                <ImportLine>1</ImportLine>
+                <FieldLen>254</FieldLen>
+                <SingleThreadRead>False</SingleThreadRead>
+                <IgnoreQuotes>DoubleQuotes</IgnoreQuotes>
+                <Delimeter>,</Delimeter>
+                <QuoteRecordBreak>False</QuoteRecordBreak>
+                <CodePage>65001</CodePage>
+              </FormatSpecificOptions>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Reference CSV (28 topics)</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+        </Node>
+        <Node ToolID="30">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="690" y="540" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="TAG_ID" selected="True" type="Int32" size="4" />
+                <SelectField field="TOPIC_DE" selected="True" type="V_WString" size="200" />
+                <SelectField field="TOPIC_FR" selected="True" type="V_WString" size="200" />
+                <SelectField field="TOPIC_EN" selected="True" type="V_WString" size="200" />
+                <SelectField field="TOPIC_DESCRIPTION_EN" selected="True" type="V_WString" size="500" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="31">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+            <Position x="780" y="490" />
+          </GuiSettings>
+          <Properties>
+            <Configuration joinByRecordPos="False">
+              <JoinInfo connection="Left">
+                <Field field="TAG_NAMES" />
+              </JoinInfo>
+              <JoinInfo connection="Right">
+                <Field field="TOPIC_DE" />
+              </JoinInfo>
+              <SelectConfiguration>
+                <Configuration outputConnection="Join">
+                  <OrderChanged value="False" />
+                  <CommaDecimal value="False" />
+                  <SelectFields>
+                    <SelectField field="*Unknown" selected="True" />
+                  </SelectFields>
+                </Configuration>
+              </SelectConfiguration>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Topic DE -&gt; id + EN</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+        </Node>
+        <Node ToolID="32">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="870" y="470" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="TAG_ID" selected="True" />
+                <SelectField field="TOPIC_DE" selected="True" />
+                <SelectField field="TOPIC_EN" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+      </ChildNodes>
+    </Node>
+    <Node ToolID="33">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="610" width="1380" height="230" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>3  Transform: members + authors (who submitted what)</Caption>
+          <Style TextColor="#314c4a" FillColor="#f3eee6" BorderColor="#314c4a" Transparency="25" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="34">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="60" y="680" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>[ENTITY] = 'MemberCouncil'</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Member rows</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="35">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="150" y="680" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="ToNumber([ID])" field="MEMBER_ID" size="8" type="Int64" />
+                <FormulaField expression="[FirstName]" field="FIRST_NAME" size="200" type="V_WString" />
+                <FormulaField expression="[LastName]" field="LAST_NAME" size="200" type="V_WString" />
+                <FormulaField expression="[PartyAbbreviation]" field="PARTY" size="50" type="V_WString" />
+                <FormulaField expression="[ParlGroupAbbreviation]" field="PARL_GROUP" size="50" type="V_WString" />
+                <FormulaField expression="[CantonAbbreviation]" field="CANTON" size="5" type="V_WString" />
+                <FormulaField expression="[CouncilAbbreviation]" field="COUNCIL" size="10" type="V_WString" />
+                <FormulaField expression="Lowercase(Trim([Active])) IN ('true', '1', '-1', 'yes')" field="IS_ACTIVE" size="1" type="Bool" />
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Typed member fields</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="36">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="240" y="680" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="TOTAL" selected="True" />
+                <SelectField field="MEMBER_ID" selected="True" />
+                <SelectField field="FIRST_NAME" selected="True" />
+                <SelectField field="LAST_NAME" selected="True" />
+                <SelectField field="PARTY" selected="True" />
+                <SelectField field="PARL_GROUP" selected="True" />
+                <SelectField field="CANTON" selected="True" />
+                <SelectField field="COUNCIL" selected="True" />
+                <SelectField field="IS_ACTIVE" selected="True" rename="ACTIVE" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="37">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Unique.Unique">
+            <Position x="330" y="680" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <UniqueFields>
+                <Field field="MEMBER_ID" />
+              </UniqueFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Dedupe on ID</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnique" />
+        </Node>
+        <Node ToolID="38">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="420" y="680" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>!IsNull([MEMBER_ID]) AND !IsEmpty([LAST_NAME])</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>DQ: id, name</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="39">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="510" y="660" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="MEMBER_ID" selected="True" />
+                <SelectField field="FIRST_NAME" selected="True" />
+                <SelectField field="LAST_NAME" selected="True" />
+                <SelectField field="PARTY" selected="True" />
+                <SelectField field="PARL_GROUP" selected="True" />
+                <SelectField field="CANTON" selected="True" />
+                <SelectField field="COUNCIL" selected="True" />
+                <SelectField field="ACTIVE" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Landing layout</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="40">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="510" y="740" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="MEMBER_ID" selected="True" />
+                <SelectField field="PARTY" selected="True" />
+                <SelectField field="CANTON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="41">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="60" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>[ENTITY] = 'BusinessRole'</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Author rows</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="42">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="150" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="ToNumber([BusinessNumber])" field="BUSINESS_ID" size="8" type="Int64" />
+                <FormulaField expression="IIF(IsEmpty([MemberCouncilNumber]), Null(), ToNumber([MemberCouncilNumber]))" field="MEMBER_ID" size="8" type="Int64" />
+                <FormulaField expression="IIF(IsEmpty([CommitteeNumber]), Null(), ToNumber([CommitteeNumber]))" field="COMMITTEE_ID" size="8" type="Int64" />
+                <FormulaField expression="IIF(!IsNull([MEMBER_ID]), 'member', IIF(!IsEmpty([CommitteeNumber]), 'committee', IIF(!IsEmpty([CantonNumber]), 'canton', IIF(!IsEmpty([ParlGroupNumber]), 'parl_group', 'other'))))" field="AUTHOR_TYPE" size="20" type="V_String" />
+                <FormulaField expression="[ID]" field="ROLE_ID" size="40" type="V_String" />
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Author type</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="43">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="240" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="TOTAL" selected="True" />
+                <SelectField field="ROLE_ID" selected="True" />
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="AUTHOR_TYPE" selected="True" />
+                <SelectField field="MEMBER_ID" selected="True" />
+                <SelectField field="COMMITTEE_ID" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="44">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="330" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>!IsNull([BUSINESS_ID])</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>DQ: business id</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="45">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+            <Position x="420" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <Expression>[AUTHOR_TYPE] = 'member'</Expression>
+              <Mode>Custom</Mode>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+        </Node>
+        <Node ToolID="46">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+            <Position x="600" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration joinByRecordPos="False">
+              <JoinInfo connection="Left">
+                <Field field="MEMBER_ID" />
+              </JoinInfo>
+              <JoinInfo connection="Right">
+                <Field field="MEMBER_ID" />
+              </JoinInfo>
+              <SelectConfiguration>
+                <Configuration outputConnection="Join">
+                  <OrderChanged value="False" />
+                  <CommaDecimal value="False" />
+                  <SelectFields>
+                    <SelectField field="*Unknown" selected="True" />
+                  </SelectFields>
+                </Configuration>
+              </SelectConfiguration>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Author -&gt; party, canton</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+        </Node>
+        <Node ToolID="47">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Union.Union">
+            <Position x="690" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <ByName_ErrorMode>Ignore</ByName_ErrorMode>
+              <ByName_OutputMode>All</ByName_OutputMode>
+              <Mode>ByName</Mode>
+              <SetOutputOrder value="False" />
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnion" />
+        </Node>
+        <Node ToolID="48">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="780" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="BUSINESS_ID" selected="True" />
+                <SelectField field="AUTHOR_TYPE" selected="True" />
+                <SelectField field="MEMBER_ID" selected="True" />
+                <SelectField field="COMMITTEE_ID" selected="True" />
+                <SelectField field="PARTY" selected="True" />
+                <SelectField field="CANTON" selected="True" />
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Landing layout</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+      </ChildNodes>
+    </Node>
+    <Node ToolID="49">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="870" width="1380" height="250" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>4  Data quality: rejects + reconciliation against the API's own $count</Caption>
+          <Style TextColor="#314c4a" FillColor="#f6e9e9" BorderColor="#314c4a" Transparency="25" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="50">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="60" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([BUSINESS_ID])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'duplicate id'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'Business'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="51">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="132" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="52">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="60" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([BUSINESS_ID])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'missing id, title or date'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'Business'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="53">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="132" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="54">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="60" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([BUSINESS_ID]) + ':' + [TAG_NAMES]" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'unknown topic (update reference/topics.csv)'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'BusinessTopic'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="55">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="132" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="56">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="240" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([MEMBER_ID])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'duplicate id'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'MemberCouncil'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="57">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="312" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="58">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="240" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([MEMBER_ID])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'missing id or name'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'MemberCouncil'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="59">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="312" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="60">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="240" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="[ROLE_ID]" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'missing business id'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'BusinessRole'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="61">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="312" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="62">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="420" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="ToString([BUSINESS_ID]) + ':' + ToString([MEMBER_ID])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'author not in member list'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'BusinessRole'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="63">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="492" y="940" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="64">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="420" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="[ENTITY] + ' page ' + ToString([PAGE])" field="RECORD_KEY" size="100" type="V_WString" />
+                <FormulaField expression="'HTTP status not 200'" field="REASON" size="200" type="V_WString" />
+                <FormulaField expression="'API'" field="ENTITY" size="50" type="V_String" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="65">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="492" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="RECORD_KEY" selected="True" />
+                <SelectField field="REASON" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+        <Node ToolID="66">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Union.Union">
+            <Position x="600" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <ByName_ErrorMode>Warning</ByName_ErrorMode>
+              <ByName_OutputMode>All</ByName_OutputMode>
+              <Mode>ByName</Mode>
+              <SetOutputOrder value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>All rejects</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnion" />
+        </Node>
+        <Node ToolID="67">
+          <GuiSettings Plugin="AlteryxSpatialPluginsGui.Summarize.Summarize">
+            <Position x="690" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <SummarizeFields>
+                <SummarizeField field="RUN_ID" action="First" rename="RUN_ID" />
+                <SummarizeField field="ENTITY" action="GroupBy" rename="ENTITY" />
+                <SummarizeField field="REASON" action="GroupBy" rename="CHECK_NAME" />
+                <SummarizeField field="REASON" action="Count" rename="FAILED_ROWS" />
+              </SummarizeFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Rejects per reason</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxSpatialPluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+        </Node>
+        <Node ToolID="68">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="780" y="1040" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="0" field="EXPECTED" size="8" type="Int64" />
+                <FormulaField expression="[FAILED_ROWS]" field="ACTUAL" size="8" type="Int64" />
+                <FormulaField expression="IIF(Contains([CHECK_NAME], 'unknown topic'), 'FAIL', 'WARN')" field="STATUS" size="10" type="V_String" />
+                <FormulaField expression="ToString([FAILED_ROWS]) + ' row(s) rejected, see OPS.DQ_REJECTS'" field="DETAIL" size="1000" type="V_WString" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="69">
+          <GuiSettings Plugin="AlteryxSpatialPluginsGui.Summarize.Summarize">
+            <Position x="600" y="1090" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <SummarizeFields>
+                <SummarizeField field="ENTITY" action="GroupBy" rename="ENTITY" />
+                <SummarizeField field="TOTAL" action="Max" rename="EXPECTED" />
+                <SummarizeField field="REC_KEY" action="Count" rename="ACTUAL" />
+              </SummarizeFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>Received vs $count</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxSpatialPluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+        </Node>
+        <Node ToolID="70">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+            <Position x="690" y="1090" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <FormulaFields>
+                <FormulaField expression="DateTimeFormat(DateTimeStart(), '%Y%m%d%H%M%S')" field="RUN_ID" size="20" type="V_String" />
+                <FormulaField expression="'extract_complete'" field="CHECK_NAME" size="100" type="V_WString" />
+                <FormulaField expression="ABS([EXPECTED] - [ACTUAL])" field="FAILED_ROWS" size="8" type="Int64" />
+                <FormulaField expression="IIF([ACTUAL] = [EXPECTED], 'PASS', 'FAIL')" field="STATUS" size="10" type="V_String" />
+                <FormulaField expression="'API $count ' + ToString([EXPECTED]) + ', records received ' + ToString([ACTUAL])" field="DETAIL" size="1000" type="V_WString" />
+              </FormulaFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>PASS / FAIL</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+        </Node>
+        <Node ToolID="71">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.Union.Union">
+            <Position x="870" y="1060" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <ByName_ErrorMode>Warning</ByName_ErrorMode>
+              <ByName_OutputMode>All</ByName_OutputMode>
+              <Mode>ByName</Mode>
+              <SetOutputOrder value="False" />
+            </Configuration>
+            <Annotation DisplayMode="2">
+              <Name />
+              <AnnotationText></AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnion" />
+        </Node>
+        <Node ToolID="72">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+            <Position x="960" y="1060" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <OrderChanged value="True" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="RUN_ID" selected="True" />
+                <SelectField field="ENTITY" selected="True" />
+                <SelectField field="CHECK_NAME" selected="True" />
+                <SelectField field="EXPECTED" selected="True" type="Int64" size="8" />
+                <SelectField field="ACTUAL" selected="True" type="Int64" size="8" />
+                <SelectField field="FAILED_ROWS" selected="True" type="Int64" size="8" />
+                <SelectField field="STATUS" selected="True" />
+                <SelectField field="DETAIL" selected="True" />
+                <SelectField field="*Unknown" selected="False" />
+              </SelectFields>
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>DQ results layout</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+        </Node>
+      </ChildNodes>
+    </Node>
+    <Node ToolID="73">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="1440" y="330" width="300" height="790" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>5  Load: Snowflake (landing -&gt; Post-SQL MERGE)</Caption>
+          <Style TextColor="#314c4a" FillColor="#e9e9f6" BorderColor="#314c4a" Transparency="25" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="74">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="380" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||RAW.BUSINESS_LANDING</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Delete</OutputOption>
+                <PostSQL>CALL CORE.MERGE_BUSINESS();</PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>RAW.BUSINESS_LANDING + MERGE</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="75">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="470" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||RAW.BUSINESS_TOPIC_LANDING</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Delete</OutputOption>
+                <PostSQL>CALL CORE.MERGE_BUSINESS_TOPIC();</PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>RAW.BUSINESS_TOPIC_LANDING + MERGE</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="76">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="560" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||CORE.TOPIC</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Delete</OutputOption>
+                <PostSQL></PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>CORE.TOPIC (reference)</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="77">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="660" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||RAW.MEMBER_LANDING</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Delete</OutputOption>
+                <PostSQL>CALL CORE.MERGE_MEMBER();</PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>RAW.MEMBER_LANDING + MERGE</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="78">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="780" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||RAW.BUSINESS_AUTHOR_LANDING</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Delete</OutputOption>
+                <PostSQL>CALL CORE.MERGE_BUSINESS_AUTHOR();</PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>RAW.BUSINESS_AUTHOR_LANDING + MERGE</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="79">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="990" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||OPS.DQ_REJECTS</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Append</OutputOption>
+                <PostSQL></PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>OPS.DQ_REJECTS</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+        <Node ToolID="80">
+          <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+            <Position x="1560" y="1070" />
+          </GuiSettings>
+          <Properties>
+            <Configuration>
+              <File MaxRecords="" FileFormat="23">odbc:DSN=snowflake_parliament|||OPS.DQ_RESULTS</File>
+              <Passwords />
+              <FormatSpecificOptions>
+                <TransactionSize>10000</TransactionSize>
+                <IgnoreDropTableSQLErrors>False</IgnoreDropTableSQLErrors>
+                <SpatialObjSize>8000</SpatialObjSize>
+                <OutputOption>Append</OutputOption>
+                <PostSQL></PostSQL>
+                <PreSQL />
+                <TableStyle>Quoted</TableStyle>
+              </FormatSpecificOptions>
+              <MultiFile value="False" />
+            </Configuration>
+            <Annotation DisplayMode="0">
+              <Name />
+              <AnnotationText>OPS.DQ_RESULTS (alerts read this)</AnnotationText>
+              <DefaultAnnotationText />
+              <Left value="False" />
+            </Annotation>
+          </Properties>
+          <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+        </Node>
+      </ChildNodes>
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection>
+      <Origin ToolID="3" Connection="Output" />
+      <Destination ToolID="4" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="4" Connection="Output" />
+      <Destination ToolID="5" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="5" Connection="Output" />
+      <Destination ToolID="6" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="6" Connection="Output" />
+      <Destination ToolID="7" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="7" Connection="Output" />
+      <Destination ToolID="8" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="8" Connection="Output" />
+      <Destination ToolID="9" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="9" Connection="Output" />
+      <Destination ToolID="10" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="10" Connection="Output" />
+      <Destination ToolID="11" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="11" Connection="Output" />
+      <Destination ToolID="12" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="12" Connection="True" />
+      <Destination ToolID="13" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="13" Connection="Output" />
+      <Destination ToolID="14" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="14" Connection="Output" />
+      <Destination ToolID="15" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="15" Connection="Output" />
+      <Destination ToolID="16" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="16" Connection="True" />
+      <Destination ToolID="17" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="18" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="20" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="20" Connection="True" />
+      <Destination ToolID="21" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="21" Connection="Output" />
+      <Destination ToolID="22" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="22" Connection="Output" />
+      <Destination ToolID="23" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="23" Connection="Unique" />
+      <Destination ToolID="24" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="24" Connection="True" />
+      <Destination ToolID="25" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="24" Connection="True" />
+      <Destination ToolID="26" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="26" Connection="Output" />
+      <Destination ToolID="27" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="27" Connection="Output" />
+      <Destination ToolID="28" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="28" Connection="True" />
+      <Destination ToolID="31" Connection="Left" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="29" Connection="Output" />
+      <Destination ToolID="30" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="30" Connection="Output" />
+      <Destination ToolID="31" Connection="Right" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="31" Connection="Join" />
+      <Destination ToolID="32" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="34" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="34" Connection="True" />
+      <Destination ToolID="35" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="35" Connection="Output" />
+      <Destination ToolID="36" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="36" Connection="Output" />
+      <Destination ToolID="37" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="37" Connection="Unique" />
+      <Destination ToolID="38" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="38" Connection="True" />
+      <Destination ToolID="39" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="38" Connection="True" />
+      <Destination ToolID="40" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="41" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="41" Connection="True" />
+      <Destination ToolID="42" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="42" Connection="Output" />
+      <Destination ToolID="43" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="43" Connection="Output" />
+      <Destination ToolID="44" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="44" Connection="True" />
+      <Destination ToolID="45" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="45" Connection="True" />
+      <Destination ToolID="46" Connection="Left" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="40" Connection="Output" />
+      <Destination ToolID="46" Connection="Right" />
+    </Connection>
+    <Connection name="#1">
+      <Origin ToolID="46" Connection="Join" />
+      <Destination ToolID="47" Connection="Input" />
+    </Connection>
+    <Connection name="#2">
+      <Origin ToolID="46" Connection="Left" />
+      <Destination ToolID="47" Connection="Input" />
+    </Connection>
+    <Connection name="#3">
+      <Origin ToolID="45" Connection="False" />
+      <Destination ToolID="47" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="47" Connection="Output" />
+      <Destination ToolID="48" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="50" Connection="Output" />
+      <Destination ToolID="51" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="52" Connection="Output" />
+      <Destination ToolID="53" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="54" Connection="Output" />
+      <Destination ToolID="55" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="56" Connection="Output" />
+      <Destination ToolID="57" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="58" Connection="Output" />
+      <Destination ToolID="59" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="60" Connection="Output" />
+      <Destination ToolID="61" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="62" Connection="Output" />
+      <Destination ToolID="63" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="64" Connection="Output" />
+      <Destination ToolID="65" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="23" Connection="Duplicates" />
+      <Destination ToolID="50" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="24" Connection="False" />
+      <Destination ToolID="52" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="31" Connection="Left" />
+      <Destination ToolID="54" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="37" Connection="Duplicates" />
+      <Destination ToolID="56" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="38" Connection="False" />
+      <Destination ToolID="58" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="44" Connection="False" />
+      <Destination ToolID="60" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="46" Connection="Left" />
+      <Destination ToolID="62" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="12" Connection="False" />
+      <Destination ToolID="64" Connection="Input" />
+    </Connection>
+    <Connection name="#1">
+      <Origin ToolID="51" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#2">
+      <Origin ToolID="53" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#3">
+      <Origin ToolID="55" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#4">
+      <Origin ToolID="57" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#5">
+      <Origin ToolID="59" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#6">
+      <Origin ToolID="61" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#7">
+      <Origin ToolID="63" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection name="#8">
+      <Origin ToolID="65" Connection="Output" />
+      <Destination ToolID="66" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="66" Connection="Output" />
+      <Destination ToolID="67" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="67" Connection="Output" />
+      <Destination ToolID="68" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="69" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="69" Connection="Output" />
+      <Destination ToolID="70" Connection="Input" />
+    </Connection>
+    <Connection name="#1">
+      <Origin ToolID="70" Connection="Output" />
+      <Destination ToolID="71" Connection="Input" />
+    </Connection>
+    <Connection name="#2">
+      <Origin ToolID="68" Connection="Output" />
+      <Destination ToolID="71" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="71" Connection="Output" />
+      <Destination ToolID="72" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="25" Connection="Output" />
+      <Destination ToolID="74" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="32" Connection="Output" />
+      <Destination ToolID="75" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="30" Connection="Output" />
+      <Destination ToolID="76" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="39" Connection="Output" />
+      <Destination ToolID="77" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="48" Connection="Output" />
+      <Destination ToolID="78" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="66" Connection="Output" />
+      <Destination ToolID="79" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="72" Connection="Output" />
+      <Destination ToolID="80" Connection="Input" />
+    </Connection>
+  </Connections>
+  <Properties>
+    <Memory default="True" />
+    <GlobalRecordLimit value="0" />
+    <TempFiles default="True" />
+    <Annotation on="True" includeToolName="False" />
+    <ConvErrorLimit value="10" />
+    <ConvErrorLimit_Stop value="False" />
+    <CancelOnError value="False" />
+    <DisableBrowse value="False" />
+    <EnablePerformanceProfiling value="True" />
+    <RunWithE2 value="True" />
+    <DisableAllOutput value="False" />
+    <ShowAllMacroMessages value="False" />
+    <ShowConnectionStatusIsOn value="True" />
+    <ShowConnectionStatusOnlyWhenRunning value="False" />
+    <ZoomLevel value="0" />
+    <LayoutType>Horizontal</LayoutType>
+    <Constants>
+      <Constant>
+        <Namespace>User</Namespace>
+        <Name>SinceDate</Name>
+        <Value>2025-01-01</Value>
+        <IsNumeric value="False" />
+      </Constant>
+    </Constants>
+    <MetaInfo>
+      <NameIsFileName value="True" />
+      <Name>parliament_pipeline</Name>
+      <Description>Swiss Parliament (Curia Vista OData API) -> clean + data quality -> Snowflake landing tables -> MERGE. Cortex AI enrichment runs in Snowflake on the changed rows.</Description>
+      <RootToolName />
+      <ToolVersion />
+      <ToolInDb value="False" />
+      <CategoryName />
+      <SearchTags>snowflake, odata, api, json, data quality, cortex</SearchTags>
+      <Author>Oskari Kaile</Author>
+      <Company />
+      <Copyright />
+      <DescriptionLink actual="" displayed="" />
+      <Example>
+        <Description />
+        <File />
+      </Example>
+    </MetaInfo>
+    <Events>
+      <Enabled value="True" />
+    </Events>
+  </Properties>
+</AlteryxDocument>

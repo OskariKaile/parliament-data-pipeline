@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parliament Pipeline Preview</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b2430; --muted:#5d6b7a; --line:#dfe4ea; --soft:#eef2f6;
+  --accent:#2f6fb0; --ok:#2f8a57; --warn:#b7791f; --bad:#c2410c;
+  --c-io:#3f8f5a; --c-prep:#2f6fb0; --c-join:#7b4fb5; --c-parse:#b0563f; --c-xform:#a8782a; --c-dev:#5b6470;
+  --box1:#e8f1f2; --box2:#eef3e6; --box3:#f3eee6; --box4:#f6e9e9; --box5:#e9e9f6; --note:#fffff0;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11161c; --panel:#18202a; --ink:#e6edf3; --muted:#9aa7b4; --line:#2b3642; --soft:#1f2934;
+    --accent:#6aa7e8; --ok:#4cc38a; --warn:#e0a84a; --bad:#f08a5d;
+    --box1:#1b2a2d; --box2:#1f2a1b; --box3:#2a241b; --box4:#2d1d1d; --box5:#1f1f33; --note:#2a2a1c;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{padding:22px 28px 0;max-width:1400px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 11px;font-size:13px;display:flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);max-width:1400px;margin:0 auto;padding:0 28px;overflow-x:auto}
+nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:10px 14px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+main{max-width:1400px;margin:0 auto;padding:22px 28px 60px}
+section{display:none} section.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.md{max-width:900px}
+.md h1{font-size:22px} .md h2{font-size:18px;margin-top:28px} .md h3{font-size:16px}
+.md table{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+.md th{background:var(--soft)}
+.md code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:13px}
+.md pre{background:var(--soft);padding:12px;border-radius:8px;overflow-x:auto}
+.md pre code{background:none;padding:0}
+.md a{color:var(--accent)}
+.mermaid{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin:14px 0;text-align:center}
+
+/* workflow canvas */
+.wfwrap{display:grid;grid-template-columns:1fr 380px;gap:14px;height:calc(100vh - 210px);min-height:520px}
+@media (max-width:980px){.wfwrap{grid-template-columns:1fr;height:auto}.canvas{height:70vh}}
+.canvas{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative;cursor:grab}
+.canvas:active{cursor:grabbing}
+.canvas svg{width:100%;height:100%;display:block;user-select:none}
+.tools{position:absolute;top:10px;left:10px;display:flex;gap:6px}
+.tools button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 9px;cursor:pointer;font:inherit;font-size:13px}
+.legend{position:absolute;bottom:10px;left:10px;display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);background:var(--panel);padding:6px 10px;border-radius:6px;border:1px solid var(--line)}
+.legend span{display:flex;align-items:center;gap:5px}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;overflow:auto}
+.side h3{margin:0 0 2px;font-size:17px}
+.side .k{color:var(--muted);font-size:13px;margin-bottom:10px}
+.side table{border-collapse:collapse;width:100%;font-size:12.5px}
+.side td,.side th{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left;vertical-align:top}
+.side code,.side pre{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px}
+.side pre{background:var(--soft);padding:10px;border-radius:6px;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}
+.expr{background:var(--soft);padding:2px 5px;border-radius:4px;display:block;white-space:pre-wrap;word-break:break-word}
+g.tool{cursor:pointer}
+g.tool:hover rect.icon{filter:brightness(1.15)}
+g.tool.sel rect.icon{stroke:var(--ink);stroke-width:3}
+
+/* data */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:24px}
+.kpi small{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.bars .row{display:grid;grid-template-columns:190px 1fr 52px;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.bars .bar{height:12px;background:var(--accent);border-radius:3px;opacity:.85}
+.bars .n{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.months{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+.months div{flex:1;background:var(--accent);opacity:.85;border-radius:3px 3px 0 0;position:relative}
+.months div:hover{opacity:1}
+.mlabels{display:flex;gap:3px;font-size:10px;color:var(--muted)}
+.mlabels span{flex:1;text-align:center;overflow:hidden}
+table.list{border-collapse:collapse;width:100%;font-size:13.5px}
+table.list th,table.list td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+table.list th{color:var(--muted);font-weight:600;font-size:12.5px}
+.tag{display:inline-block;background:var(--soft);border-radius:4px;padding:0 6px;margin:1px 3px 1px 0;font-size:12px}
+.pass{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}.fail{color:var(--bad);font-weight:600}
+.scroll{overflow-x:auto}
+input.search{width:100%;max-width:380px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font:inherit;margin-bottom:10px}
+
+/* code */
+.codewrap{display:grid;grid-template-columns:260px 1fr;gap:14px}
+@media (max-width:900px){.codewrap{grid-template-columns:1fr}}
+.files button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 10px;border-radius:6px;color:var(--ink);font:inherit;font-size:13.5px;cursor:pointer}
+.files button.on{background:var(--soft);font-weight:600}
+.files .hint{color:var(--muted);font-size:12px;padding:0 10px 8px}
+.code{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:calc(100vh - 220px)}
+.code pre{margin:0;padding:14px 16px;font:12.5px/1.5 Consolas,"Cascadia Mono",monospace}
+.code pre code.hljs{background:transparent;padding:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Swiss Parliament pipeline: Alteryx → Snowflake → Cortex AI</h1>
+  <p class="sub">Local preview of the project files. Built __BUILT__ from <code>parliament-data-pipeline/</code>.</p>
+  <div class="chips">
+    <span class="chip"><span class="dot" style="background:var(--ok)"></span>Python twin tested on the live API</span>
+    <span class="chip"><span class="dot" style="background:var(--warn)"></span>Alteryx workflow generated, not run in Designer yet</span>
+    <span class="chip"><span class="dot" style="background:var(--warn)"></span>Snowflake SQL written, account not set up yet</span>
+  </div>
+</header>
+<nav id="nav">
+  <button data-t="overview" class="on">Overview</button>
+  <button data-t="workflow">Alteryx workflow</button>
+  <button data-t="data">Data (live API)</button>
+  <button data-t="code">SQL &amp; code</button>
+  <button data-t="docs">Setup &amp; walkthrough</button>
+</nav>
+<main>
+  <section id="overview" class="on"><div class="card md" id="readme"></div></section>
+
+  <section id="workflow">
+    <div class="wfwrap">
+      <div class="canvas" id="canvas">
+        <div class="tools"><button id="fit">Fit</button><button id="zin">+</button><button id="zout">−</button></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="side" id="side">
+        <h3>Click any tool</h3>
+        <div class="k">Drawn from <code>alteryx/parliament_pipeline.yxmd</code>, the same file Alteryx Designer opens. Scroll to zoom, drag to pan.</div>
+        <p>Every tool shows its real configuration: formulas, filters, the fields a Select keeps, the Snowflake table and Post-SQL of each Output.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="data"><div id="dataroot"></div></section>
+
+  <section id="code">
+    <div class="codewrap">
+      <div class="card files" id="files"></div>
+      <div class="code"><pre><code id="codeview"></code></pre></div>
+    </div>
+  </section>
+
+  <section id="docs"><div class="card md" id="docsmd"></div></section>
+</main>
+
+<script id="bundle" type="application/json">__BUNDLE__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+const B = JSON.parse(document.getElementById('bundle').textContent);
+const F = B.files;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => Number(n).toLocaleString('en-US');
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+// ---------- tabs
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id === b.dataset.t));
+  if (b.dataset.t === 'workflow') fitView();
+});
+
+// ---------- markdown
+mermaid.initialize({startOnLoad:false, theme: dark ? 'dark' : 'default', securityLevel:'strict'});
+function renderMd(el, md){
+  el.innerHTML = marked.parse(md);
+  el.querySelectorAll('pre code.language-mermaid').forEach(c => {
+    const d = document.createElement('div'); d.className = 'mermaid'; d.textContent = c.textContent;
+    c.parentElement.replaceWith(d);
+  });
+  el.querySelectorAll('pre code').forEach(c => hljs.highlightElement(c));
+  el.querySelectorAll('a[href]').forEach(a => {
+    const h = a.getAttribute('href');
+    if (/^https?:/.test(h)) { a.target = '_blank'; a.rel = 'noopener'; }
+    else { a.href = '#'; a.onclick = e => { e.preventDefault(); openFile(h.replace(/^\.\.\//,'').replace(/^docs\//,'docs/')); }; }
+  });
+  mermaid.run({nodes: el.querySelectorAll('.mermaid')});
+}
+renderMd($('#readme'), F['README.md']);
+renderMd($('#docsmd'), F['docs/SETUP.md'] + '\n\n---\n\n' + F['docs/PIPELINE.md']);
+
+// ---------- workflow canvas
+const CAT = {
+  TextInput:['io','Text Input','TXT'], DbFileInput:['io','Input Data','IN'], DbFileOutput:['io','Output Data','OUT'],
+  Formula:['prep','Formula','ƒx'], Filter:['prep','Filter','FLT'], AlteryxSelect:['prep','Select','SEL'],
+  Unique:['prep','Unique','UNQ'], GenerateRows:['prep','Generate Rows','GEN'],
+  Join:['join','Join','JN'], Union:['join','Union','UN'],
+  TextToColumns:['parse','Text To Columns','T2C'], JSONParse:['parse','JSON Parse','{ }'],
+  CrossTab:['xform','Cross Tab','XT'], Summarize:['xform','Summarize','Σ'],
+  Download:['dev','Download','DL'],
+};
+const CATNAME = {io:'In/Out', prep:'Preparation', join:'Join', parse:'Parse', xform:'Transform', dev:'Developer'};
+$('#legend').innerHTML = Object.entries(CATNAME).map(([k,v]) =>
+  `<span><i class="dot" style="background:var(--c-${k});width:10px;height:10px;border-radius:3px"></i>${v}</span>`).join('');
+
+const doc = new DOMParser().parseFromString(F['alteryx/parliament_pipeline.yxmd'], 'application/xml');
+const nodes = {}; const containers = []; const notes = [];
+doc.querySelectorAll('Node').forEach(n => {
+  const id = n.getAttribute('ToolID');
+  const plugin = n.querySelector(':scope > GuiSettings').getAttribute('Plugin');
+  const short = plugin.split('.').pop();
+  const pos = n.querySelector(':scope > GuiSettings > Position');
+  const x = +pos.getAttribute('x'), y = +pos.getAttribute('y');
+  const cfg = n.querySelector(':scope > Properties > Configuration');
+  if (short === 'ToolContainer') {
+    containers.push({id, x, y, w:+pos.getAttribute('width'), h:+pos.getAttribute('height'),
+      caption: cfg.querySelector('Caption').textContent, fill: cfg.querySelector('Style').getAttribute('FillColor')});
+  } else if (short === 'TextBox') {
+    notes.push({x, y, w:+pos.getAttribute('width'), h:+pos.getAttribute('height'), text: cfg.querySelector('Text').textContent});
+  } else {
+    const ann = n.querySelector(':scope > Properties > Annotation > AnnotationText');
+    nodes[id] = {id, short, x, y, cfg, note: ann ? ann.textContent : ''};
+  }
+});
+const conns = [...doc.querySelectorAll('Connections > Connection')].map(c => ({
+  from: c.querySelector('Origin').getAttribute('ToolID'), out: c.querySelector('Origin').getAttribute('Connection'),
+  to: c.querySelector('Destination').getAttribute('ToolID'), inp: c.querySelector('Destination').getAttribute('Connection')}));
+
+const S = 34; // icon size
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.createElementNS(NS, 'svg');
+$('#canvas').prepend(svg);
+const world = document.createElementNS(NS, 'g'); svg.appendChild(world);
+const boxFill = {'#e8f1f2':'--box1','#eef3e6':'--box2','#f3eee6':'--box3','#f6e9e9':'--box4','#e9e9f6':'--box5'};
+let html = '';
+containers.forEach(c => {
+  html += `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8" fill="var(${boxFill[c.fill]||'--soft'})" stroke="var(--line)" stroke-width="1.5"/>
+           <text x="${c.x+12}" y="${c.y+20}" font-size="13" font-weight="600" fill="var(--ink)">${esc(c.caption)}</text>`;
+});
+notes.forEach(n => {
+  html += `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}"><div xmlns="http://www.w3.org/1999/xhtml"
+    style="background:var(--note);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:11.5px;line-height:1.35;height:100%;overflow:hidden;color:var(--ink);white-space:pre-line">${esc(n.text)}</div></foreignObject>`;
+});
+const OUTL = {True:'T', False:'F', Join:'J', Left:'L', Right:'R', Unique:'U', Duplicates:'D'};
+const outIdx = {}; // spread multiple anchors of one tool
+conns.forEach(c => {
+  const a = nodes[c.from], b = nodes[c.to]; if (!a || !b) return;
+  const key = c.from + c.out;
+  const anchors = [...new Set(conns.filter(k => k.from === c.from).map(k => k.out))];
+  const ai = anchors.indexOf(c.out), an = anchors.length;
+  const y1 = a.y + S/2 + (an > 1 ? (ai - (an-1)/2) * 11 : 0);
+  const x1 = a.x + S, x2 = b.x, y2 = b.y + S/2 + (c.inp === 'Left' ? -7 : c.inp === 'Right' ? 7 : 0);
+  const dx = Math.max(30, Math.abs(x2 - x1) * .45);
+  const back = x2 < x1;
+  const d = back
+    ? `M${x1},${y1} C${x1+60},${y1} ${x2-60},${y2} ${x2},${y2}`
+    : `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+  html += `<path d="${d}" fill="none" stroke="var(--muted)" stroke-opacity=".55" stroke-width="1.4"/>`;
+  if (OUTL[c.out]) html += `<text x="${x1+3}" y="${y1-3}" font-size="9" fill="var(--muted)">${OUTL[c.out]}</text>`;
+  outIdx[key] = 1;
+});
+Object.values(nodes).forEach(n => {
+  const [cat, label, glyph] = CAT[n.short] || ['dev', n.short, '?'];
+  const title = n.note || label;
+  html += `<g class="tool" data-id="${n.id}">
+    <rect class="icon" x="${n.x}" y="${n.y}" width="${S}" height="${S}" rx="7" fill="var(--c-${cat})"/>
+    <text x="${n.x+S/2}" y="${n.y+S/2+4}" text-anchor="middle" font-size="${glyph.length>2?10:12}" font-weight="700" fill="#fff">${esc(glyph)}</text>
+    <foreignObject x="${n.x-26}" y="${n.y+S+2}" width="${S+52}" height="40"><div xmlns="http://www.w3.org/1999/xhtml"
+      style="font-size:9.5px;line-height:1.2;text-align:center;color:var(--ink)">${esc(title)}</div></foreignObject>
+    <title>${esc(label)} (tool ${n.id})</title></g>`;
+});
+world.innerHTML = html;
+
+// pan / zoom
+let vb = {x:0, y:0, w:1800, h:1150};
+const setVB = () => svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+function fitView(){
+  const r = $('#canvas').getBoundingClientRect(); if (!r.width) return;
+  const W = 1780, H = 1140; const s = Math.max(W / r.width, H / r.height);
+  vb = {w: r.width * s, h: r.height * s, x: 0, y: 0}; vb.x = 890 - vb.w/2 + 0; vb.y = 570 - vb.h/2; setVB();
+}
+function zoom(f, cx, cy){
+  const nw = vb.w * f, nh = vb.h * f;
+  vb.x = cx - (cx - vb.x) * f; vb.y = cy - (cy - vb.y) * f; vb.w = nw; vb.h = nh; setVB();
+}
+const toWorld = e => { const r = svg.getBoundingClientRect(); return [vb.x + (e.clientX - r.left) / r.width * vb.w, vb.y + (e.clientY - r.top) / r.height * vb.h]; };
+svg.addEventListener('wheel', e => { e.preventDefault(); const [cx, cy] = toWorld(e); zoom(e.deltaY > 0 ? 1.12 : 1/1.12, cx, cy); }, {passive:false});
+let drag = null;
+svg.addEventListener('pointerdown', e => { if (e.target.closest('g.tool')) return; drag = {x:e.clientX, y:e.clientY, vx:vb.x, vy:vb.y}; svg.setPointerCapture(e.pointerId); });
+svg.addEventListener('pointermove', e => { if (!drag) return; const r = svg.getBoundingClientRect();
+  vb.x = drag.vx - (e.clientX - drag.x) / r.width * vb.w; vb.y = drag.vy - (e.clientY - drag.y) / r.height * vb.h; setVB(); });
+svg.addEventListener('pointerup', () => drag = null);
+$('#fit').onclick = fitView;
+$('#zin').onclick = () => zoom(1/1.25, vb.x + vb.w/2, vb.y + vb.h/2);
+$('#zout').onclick = () => zoom(1.25, vb.x + vb.w/2, vb.y + vb.h/2);
+addEventListener('resize', () => { if ($('#workflow').classList.contains('on')) fitView(); });
+
+// tool details
+const kv = rows => `<table>${rows.map(([k,v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('')}</table>`;
+const code = s => `<code class="expr">${esc(s)}</code>`;
+function describe(n){
+  const c = n.cfg, q = s => c.querySelector(s), qa = s => [...c.querySelectorAll(s)];
+  switch (n.short) {
+    case 'TextInput': {
+      const f = qa('Fields > Field').map(x => x.getAttribute('name'));
+      const rows = qa('Data > r').map(r => [...r.querySelectorAll('c')].map(x => x.textContent));
+      return `<p>Config table, one row per API entity.</p><div class="scroll"><table><tr>${f.map(x=>`<th>${esc(x)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td><code>${esc(v)}</code></td>`).join('')}</tr>`).join('')}</table></div>`;
+    }
+    case 'Formula':
+      return kv(qa('FormulaField').map(x => [`${x.getAttribute('field')} (${x.getAttribute('type')})`, code(x.getAttribute('expression'))]));
+    case 'Filter': return `<p>Records where this is true go to <b>T</b>, the rest to <b>F</b>.</p>${code(q('Expression').textContent)}`;
+    case 'AlteryxSelect': {
+      const keep = qa('SelectField').filter(x => x.getAttribute('selected') === 'True' && x.getAttribute('field') !== '*Unknown');
+      return `<p>Keeps ${keep.length} fields, drops everything else.</p>` + kv(keep.map(x => [x.getAttribute('field'),
+        (x.getAttribute('rename') ? '→ ' + esc(x.getAttribute('rename')) + ' ' : '') + (x.getAttribute('type') ? esc(x.getAttribute('type')) : '')]));
+    }
+    case 'Unique': return `<p>First record per key goes to <b>U</b>, repeats to <b>D</b>.</p>` + kv(qa('Field').map(x => ['Key', esc(x.getAttribute('field'))]));
+    case 'GenerateRows': return kv([['New field', esc(q('CreateField_Name').textContent)], ['Start', code(q('Expression_Init').textContent)],
+      ['While', code(q('Expression_Cond').textContent)], ['Step', code(q('Expression_Loop').textContent)]]);
+    case 'Download': return kv([['URL field', esc(q('URLField').textContent)], ['Method', 'GET'],
+      ['Headers', qa('Headers NameValue').map(h => esc(h.getAttribute('name') + ': ' + h.getAttribute('value'))).join('<br>')],
+      ['Output', 'DownloadData (string), DownloadHeaders']]);
+    case 'JSONParse': return kv([['JSON field', esc(q('JSON_Field').textContent)], ['Output', 'JSON_Name, JSON_ValueString (one row per value)']]);
+    case 'CrossTab': return kv([['Group by', esc(qa('GroupFields Field').map(x=>x.getAttribute('field')).join(', '))],
+      ['New columns from', esc(q('HeaderField').getAttribute('field'))], ['Values from', esc(q('DataField').getAttribute('field'))],
+      ['Method', esc(q('Method').getAttribute('method'))]]);
+    case 'Summarize': return kv(qa('SummarizeField').map(x => [x.getAttribute('rename'), esc(x.getAttribute('action') + '(' + x.getAttribute('field') + ')')]));
+    case 'Join': return `<p><b>J</b> = matched, <b>L</b> = left only, <b>R</b> = right only.</p>` + kv([
+      ['Left key', esc(qa('JoinInfo[connection=Left] Field').map(x=>x.getAttribute('field')).join(', '))],
+      ['Right key', esc(qa('JoinInfo[connection=Right] Field').map(x=>x.getAttribute('field')).join(', '))]]);
+    case 'Union': return `<p>Stacks all inputs by field name.</p>`;
+    case 'TextToColumns': return kv([['Field', esc(q('Field').textContent)], ['Delimiter', code(q('Delimeters').getAttribute('value'))], ['Mode', 'Split to rows']]);
+    case 'DbFileInput': return kv([['File', esc(q('File').textContent)]]);
+    case 'DbFileOutput': {
+      const f = q('File').textContent, post = q('PostSQL'), mode = q('OutputOption');
+      if (f.startsWith('odbc:')) { const [conn, table] = f.split('|||');
+        return kv([['Connection', esc(conn)], ['Table', `<b>${esc(table)}</b>`],
+          ['Mode', esc(mode.textContent === 'Delete' ? 'Delete Data & Append' : 'Append Existing')],
+          ['Post-SQL', post && post.textContent ? code(post.textContent) : '–']]); }
+      return kv([['File', esc(f)]]);
+    }
+  }
+  return '';
+}
+function showTool(id){
+  const n = nodes[id]; const [cat, label] = CAT[n.short] || ['dev', n.short];
+  document.querySelectorAll('g.tool').forEach(g => g.classList.toggle('sel', g.dataset.id === id));
+  const raw = new XMLSerializer().serializeToString(n.cfg).replace(/ xmlns="[^"]*"/g,'');
+  const ins = conns.filter(c => c.to === id).map(c => `${(nodes[c.from]?.note || CAT[nodes[c.from]?.short]?.[1] || c.from)} (${c.out})`);
+  const outs = conns.filter(c => c.from === id).map(c => `${c.out} → ${(nodes[c.to]?.note || CAT[nodes[c.to]?.short]?.[1] || c.to)}`);
+  $('#side').innerHTML = `<h3>${esc(label)}</h3><div class="k">Tool ${id} · ${CATNAME[cat]}${n.note ? ' · ' + esc(n.note) : ''}</div>
+    ${describe(n)}
+    <p style="margin-top:14px"><b>In:</b> ${esc(ins.join(', ') || '–')}<br><b>Out:</b> ${esc(outs.join(', ') || '–')}</p>
+    <details><summary>Raw XML from the .yxmd</summary><pre>${esc(raw)}</pre></details>`;
+}
+world.addEventListener('click', e => { const g = e.target.closest('g.tool'); if (g) showTool(g.dataset.id); });
+
+// ---------- data tab
+(function(){
+  const E = B.expected, P = B.profile; if (!E || !P) { $('#dataroot').innerHTML = '<p>Run tools/reference_check.py first.</p>'; return; }
+  const bars = (obj, n=40) => { const e = Object.entries(obj).slice(0,n); const m = Math.max(...e.map(x=>x[1]));
+    return `<div class="bars">${e.map(([k,v]) => `<div class="row"><span>${esc(k)}</span><div class="bar" style="width:${v/m*100}%"></div><span class="n">${fmt(v)}</span></div>`).join('')}</div>`; };
+  const months = Object.entries(P.per_month); const mm = Math.max(...months.map(x=>x[1]));
+  const dq = [
+    ['Business','extract_complete', E.api_count.Business, E.api_count.Business, E.extract_complete.Business ? 'PASS':'FAIL'],
+    ['BusinessRole','extract_complete', E.api_count.BusinessRole, E.api_count.BusinessRole, E.extract_complete.BusinessRole ? 'PASS':'FAIL'],
+    ['MemberCouncil','extract_complete', E.api_count.MemberCouncil, E.api_count.MemberCouncil, E.extract_complete.MemberCouncil ? 'PASS':'FAIL'],
+    ['Business','duplicate id', 0, E.business.duplicates, E.business.duplicates ? 'WARN':'PASS'],
+    ['Business','missing id, title or date', 0, E.business.rejected_missing_fields, E.business.rejected_missing_fields ? 'WARN':'PASS'],
+    ['BusinessTopic','unknown topic', 0, Object.keys(E.business_topic.unknown_topics).length, Object.keys(E.business_topic.unknown_topics).length ? 'FAIL':'PASS'],
+    ['BusinessRole','author not in member list', 0, E.business_author.orphan_member_authors, E.business_author.orphan_member_authors ? 'WARN':'PASS'],
+  ];
+  $('#dataroot').innerHTML = `
+  <p class="sub">From the Python twin (<code>tools/reference_check.py</code>) on the live API, ${esc(E.generated_at.replace('T',' ').slice(0,16))} UTC, items since ${esc(E.since)}. These are the numbers the Alteryx run must reproduce in Snowflake.</p>
+  <div class="kpis">
+    <div class="kpi"><small>Business items received</small><b>${fmt(E.api_count.Business)}</b><small>= API $count</small></div>
+    <div class="kpi"><small>Pass DQ → CORE.BUSINESS</small><b>${fmt(E.business.valid)}</b><small>${E.business.duplicates} duplicate, ${E.business.rejected_missing_fields} empty titles</small></div>
+    <div class="kpi"><small>Topic rows</small><b>${fmt(E.business_topic.rows)}</b><small>28 official topics</small></div>
+    <div class="kpi"><small>Author rows</small><b>${fmt(E.business_author.rows)}</b><small>${fmt(E.business_author.by_type.member)} by members</small></div>
+    <div class="kpi"><small>Members</small><b>${fmt(E.member.valid)}</b><small>in office since ${esc(E.since)}</small></div>
+  </div>
+  <div class="card" style="margin-bottom:14px"><h3 style="margin-top:0">Expected data-quality results (OPS.DQ_RESULTS)</h3><div class="scroll">
+    <table class="list"><tr><th>Entity</th><th>Check</th><th>Expected</th><th>Actual</th><th>Status</th></tr>
+    ${dq.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td><td class="${r[4].toLowerCase()}">${r[4]}</td></tr>`).join('')}</table></div></div>
+  <div class="card" style="margin-bottom:14px"><h3 style="margin-top:0">Items submitted per month</h3>
+    <div class="months">${months.map(([k,v]) => `<div style="height:${v/mm*100}%" title="${k}: ${fmt(v)}"></div>`).join('')}</div>
+    <div class="mlabels">${months.map(([k]) => `<span>${k.slice(2).replace('-','/')}</span>`).join('')}</div></div>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">Official topics</h3>${bars(P.per_topic_en)}</div>
+    <div class="card"><h3 style="margin-top:0">Item types</h3>${bars(P.per_type)}<h3>Authored items per party</h3>${bars(P.authors_per_party, 12)}</div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">Latest items (what lands in CORE.BUSINESS)</h3>
+    <input class="search" id="q" placeholder="Filter by title, topic, type…">
+    <div class="scroll"><table class="list" id="sample"></table></div>
+    <p class="sub" style="margin-top:8px">The English title, summary and AI/digital flag get added by Cortex after the Snowflake load.</p></div>`;
+  const draw = f => { $('#sample').innerHTML = `<tr><th>Date</th><th>No.</th><th>Type</th><th>Title (German, from the API)</th><th>Official topics</th></tr>` +
+    P.sample.filter(s => !f || JSON.stringify(s).toLowerCase().includes(f)).map(s => `<tr><td style="white-space:nowrap">${s.submitted_on}</td>
+      <td><a href="${esc(s.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(s.short_number)}</a></td><td>${esc(s.type)}</td>
+      <td><b>${esc(s.title_de)}</b><br><span style="color:var(--muted);font-size:12.5px">${esc(s.body_de.slice(0,220))}${s.body_de.length>220?'…':''}</span></td>
+      <td>${s.topics_en.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td></tr>`).join(''); };
+  draw(''); $('#q').oninput = e => draw(e.target.value.toLowerCase());
+})();
+
+// ---------- code tab
+const order = Object.keys(F).filter(k => !k.endsWith('.md'));
+const groups = {'Snowflake SQL': order.filter(k => k.startsWith('snowflake/')), 'Alteryx': order.filter(k => k.startsWith('alteryx/')),
+  'Tools & reference': order.filter(k => k.startsWith('tools/') || k.startsWith('reference/'))};
+$('#files').innerHTML = Object.entries(groups).map(([g, fs]) => `<div class="hint" style="margin-top:6px"><b>${g}</b></div>` +
+  fs.map(f => `<button data-f="${esc(f)}">${esc(f.split('/').slice(1).join('/'))}</button>`).join('')).join('');
+function openFile(f){
+  if (!(f in F)) return;
+  if (f.endsWith('.md')) { document.querySelector('[data-t=docs]').click(); return; }
+  document.querySelector('[data-t=code]').click();
+  document.querySelectorAll('#files button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+  const lang = f.endsWith('.sql') ? 'sql' : f.endsWith('.py') ? 'python' : f.endsWith('.yxmd') ? 'xml' : 'plaintext';
+  const el = $('#codeview'); el.className = 'language-' + lang; el.removeAttribute('data-highlighted');
+  el.textContent = F[f]; if (F[f].length < 400000) hljs.highlightElement(el);
+}
+$('#files').onclick = e => { const b = e.target.closest('button'); if (b) openFile(b.dataset.f); };
+openFile('snowflake/03_cortex_enrichment.sql'); document.querySelector('[data-t=overview]').click();
+</script>
+</body>
+</html>
